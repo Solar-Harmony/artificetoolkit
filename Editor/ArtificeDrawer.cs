@@ -416,7 +416,7 @@ namespace ArtificeToolkit.Editor
             }
             
             // Create container for drawing selected inherited property. This will be cleared and drawn again upon change.
-            var referenceContainer = new BindableElement();
+            var referenceContainer = new VisualElement();
             container.Add(referenceContainer);
             
             // Initialize UI based on current value.

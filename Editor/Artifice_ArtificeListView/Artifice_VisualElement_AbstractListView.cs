@@ -123,28 +123,46 @@ namespace ArtificeToolkit.Editor
                     // Build Prefab Override Indicator
                     elem.Add(BuildPrefabOverrideIndicatorUI());
                     
-                    // Build List Header
-                    elem.Add(BuildListHeaderUI());
-                    
-                    // PreChildren Build
-                    var prePropertyElem = BuildPrePropertyUI(Property);
-                    elem.Add(prePropertyElem);
-                    
-                    // Add children
-                    var index = 0;
-                    _childrenContainer = new VisualElement();
-                    _childrenContainer.AddToClassList("children-container");
-                    _childrenContainer.SetEnabled(_isEditable);
-
                     var childrenProperties = Property.GetVisibleChildren();
-                    if (childrenProperties.Count == 1) // childProperty for list size will always exist, so Count == 1 means the list is empty
+                    if (childrenProperties.Count <= 1) // List is empty
                     {
-                        var emptyListLabel = new Label("List is empty.");
-                        emptyListLabel.AddToClassList("empty-list-label");
-                        _childrenContainer.Add(emptyListLabel);
+                        // Replace the list header with a big add button
+                        var addButton = new Button(OnAddItem) { text = $"+ Add {Property.displayName}" };
+                        addButton.style.flexGrow = 1;
+                        addButton.style.height = 24; // Match typical header height
+                        addButton.style.backgroundColor = new Color(0.15f, 0.15f, 0.15f); // Black rectangle look
+                        addButton.style.color = Color.white;
+                        addButton.style.borderTopWidth = 0;
+                        addButton.style.borderBottomWidth = 0;
+                        addButton.style.borderLeftWidth = 0;
+                        addButton.style.borderRightWidth = 0;
+                        addButton.style.borderBottomColor = Color.black;
+                        addButton.style.paddingTop = 0;
+                        addButton.style.paddingBottom = 0;
+                        addButton.style.paddingLeft = 0;
+                        addButton.style.paddingRight = 0;
+                        addButton.style.marginTop = 0;
+                        addButton.style.marginBottom = 0;
+                        addButton.style.marginLeft = 0;
+                        addButton.style.marginRight = 0;
+                        addButton.SetEnabled(_isEditable);
+                        elem.Add(addButton);
                     }
                     else
                     {
+                        // Build List Header
+                        elem.Add(BuildListHeaderUI());
+                        
+                        // PreChildren Build
+                        var prePropertyElem = BuildPrePropertyUI(Property);
+                        elem.Add(prePropertyElem);
+                        
+                        // Add children
+                        var index = 0;
+                        _childrenContainer = new VisualElement();
+                        _childrenContainer.AddToClassList("children-container");
+                        _childrenContainer.SetEnabled(_isEditable);
+
                         foreach (var childProperty in childrenProperties)
                         {
                             if (childProperty.propertyType == SerializedPropertyType.ArraySize)
@@ -154,14 +172,15 @@ namespace ArtificeToolkit.Editor
                             _children.Add(new ChildElement(childElem, childProperty, index++));
                             _childrenContainer.Add(childElem);
                         }
-                    }
-                    elem.Add(_childrenContainer);
+                        
+                        elem.Add(_childrenContainer);
 
-                    // Set children container hide state based on isExpanded
-                    if (Property.isExpanded == false)
-                    {
-                        prePropertyElem?.AddToClassList("hide");
-                        _childrenContainer.AddToClassList("hide");
+                        // Set children container hide state based on isExpanded
+                        if (Property.isExpanded == false)
+                        {
+                            prePropertyElem?.AddToClassList("hide");
+                            _childrenContainer.AddToClassList("hide");
+                        }
                     }
                     
                     Property.serializedObject.ApplyModifiedProperties();
@@ -674,7 +693,8 @@ namespace ArtificeToolkit.Editor
         
         public void SetTitle(string title)
         {
-            _listViewLabel.text = title;
+            if (_listViewLabel != null)
+                _listViewLabel.text = title;
         }
         
         public void SetChildrenInjectedCustomAttributes(List<CustomAttribute> childrenInjectedCustomAttributes)
