@@ -128,23 +128,7 @@ namespace ArtificeToolkit.Editor
                     {
                         // Replace the list header with a big add button
                         var addButton = new Button(OnAddItem) { text = $"+ Add {Property.displayName}" };
-                        addButton.style.flexGrow = 1;
-                        addButton.style.height = 24; // Match typical header height
-                        addButton.style.backgroundColor = new Color(0.15f, 0.15f, 0.15f); // Black rectangle look
-                        addButton.style.color = Color.white;
-                        addButton.style.borderTopWidth = 0;
-                        addButton.style.borderBottomWidth = 0;
-                        addButton.style.borderLeftWidth = 0;
-                        addButton.style.borderRightWidth = 0;
-                        addButton.style.borderBottomColor = Color.black;
-                        addButton.style.paddingTop = 0;
-                        addButton.style.paddingBottom = 0;
-                        addButton.style.paddingLeft = 0;
-                        addButton.style.paddingRight = 0;
-                        addButton.style.marginTop = 0;
-                        addButton.style.marginBottom = 0;
-                        addButton.style.marginLeft = 0;
-                        addButton.style.marginRight = 0;
+                        addButton.AddToClassList("add-button-big");
                         addButton.SetEnabled(_isEditable);
                         elem.Add(addButton);
                     }
