@@ -85,7 +85,16 @@ namespace ArtificeToolkit.Editor
                     isNextPropertyArrayIndex = false;
                     var arrayIndex = ParseArrayIndex(propName);
                     if (target is IList targetAsArray)
-                        target = targetAsArray[arrayIndex];
+                    {
+                        if (arrayIndex >= 0 && arrayIndex < targetAsArray.Count)
+                        {
+                            target = targetAsArray[arrayIndex];
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
                 }
                 else
                 {
