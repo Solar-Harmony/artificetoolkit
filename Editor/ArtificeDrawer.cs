@@ -407,10 +407,7 @@ namespace ArtificeToolkit.Editor
             selectorContainer.Add(dropdown);
             
             // Create container for drawing selected inherited property. This will be cleared and drawn again upon change.
-            var referenceContainer = new Foldout();
-            referenceContainer.AddToClassList("reference-container");
-            referenceContainer.BindProperty(property);
-            referenceContainer.text = "Reference Value";
+            var referenceContainer = new VisualElement();
             container.Add(referenceContainer);
             
             // Initialize UI based on current value.
@@ -470,13 +467,11 @@ namespace ArtificeToolkit.Editor
                 
                 // Clear reference container.
                 referenceContainer.Clear();
-                referenceContainer.RemoveFromClassList("reference-container");
                 
                 // Get value from type map, create instance and draw from artifice.
                 if (property.managedReferenceValue != null && property.hasVisibleChildren)
                 {
                     referenceContainer.RemoveFromClassList("hide");
-                    referenceContainer.AddToClassList("reference-container");
                     
                     foreach(var childProperty in property.GetVisibleChildren())
                         referenceContainer.Add(CreatePropertyGUI(childProperty));
