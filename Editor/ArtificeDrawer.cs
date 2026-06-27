@@ -369,12 +369,15 @@ namespace ArtificeToolkit.Editor
             var typeName = property.managedReferenceFieldTypename;
             var baseType = Artifice_SerializedPropertyExtensions.GetTypeFromFieldTypename(typeName);
 
-            // If its a case we do not cover fall back to normal case.
-            if (baseType.IsInterface == false && baseType.IsAbstract == false)
-                return new PropertyField(property);
-            
             // Get all derived types and create string map for easy accessing.
             var types = UnityEditor.TypeCache.GetTypesDerivedFrom(baseType).OrderBy(type => type.Name).ToList();
+            
+            if (baseType.IsInterface == false && baseType.IsAbstract == false)
+            {
+                types.Add(baseType);
+                types = types.OrderBy(type => type.Name).ToList();
+            }
+
             var typeMap = new Dictionary<string, Type>();
             foreach (var type in types)
             {
@@ -397,17 +400,23 @@ namespace ArtificeToolkit.Editor
             selectorContainer.AddToClassList("serialize-reference-selector");
             container.Add(selectorContainer);
             
-            // Create dropdown for selections.
+            // Create dropdown for selections
             var dropdown = new DropdownField();
             dropdown.AddToClassList(BaseField<object>.alignedFieldUssClassName);
             dropdown.label = property.displayName;
             dropdown.choices.Add("Null");
             foreach (var pair in typeMap)
                 dropdown.choices.Add(pair.Key);
-            selectorContainer.Add(dropdown);
+        
+            // Don't show the dropdown for concrete types
+            bool isPolymorphicType = baseType.IsInterface || baseType.IsAbstract || typeMap.Count != 1;
+            if (isPolymorphicType)
+            {
+                selectorContainer.Add(dropdown);
+            }
             
             // Create container for drawing selected inherited property. This will be cleared and drawn again upon change.
-            var referenceContainer = new VisualElement();
+            var referenceContainer = new BindableElement();
             container.Add(referenceContainer);
             
             // Initialize UI based on current value.
@@ -419,6 +428,18 @@ namespace ArtificeToolkit.Editor
             }
             else   
                 dropdown.value = "Null";
+            
+            // Auto-instantiate if single concrete type
+            if (!isPolymorphicType && typeMap.Values.FirstOrDefault() is { } singleType)
+            {
+                if (property.managedReferenceValue == null)
+                {
+                    property.managedReferenceValue = Activator.CreateInstance(singleType);
+                    property.serializedObject.ApplyModifiedProperties();
+                }
+                dropdown.value = singleType.Name;
+                RebuildReferenceContainerGUI();
+            }
             
             // Reference container will constantly track property for value changes (Supports undo and object reset this way) to redraw it self.
             referenceContainer.TrackPropertyValue(property, trackedProperty =>
