@@ -82,7 +82,7 @@ namespace ArtificeToolkit.Editor.Artifice_CustomAttributeDrawers.CustomAttribute
             
             // Else, parse as serialized object
             var serializedObject = new SerializedObject((ScriptableObject)target);
-            foreach (var childProperty in serializedObject.GetIterator().GetVisibleChildren())
+            foreach (var childProperty in serializedObject.GetIterator().GetVisibleChildren().SortProperties())
             {
                 if (childProperty.name == "m_Script")
                     continue;

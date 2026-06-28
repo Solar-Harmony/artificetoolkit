@@ -494,7 +494,7 @@ namespace ArtificeToolkit.Editor
                 {
                     referenceContainer.RemoveFromClassList("hide");
                     
-                    foreach(var childProperty in property.GetVisibleChildren())
+                    foreach(var childProperty in property.GetVisibleChildren().SortProperties())
                         referenceContainer.Add(CreatePropertyGUI(childProperty));
                 }
                 else
