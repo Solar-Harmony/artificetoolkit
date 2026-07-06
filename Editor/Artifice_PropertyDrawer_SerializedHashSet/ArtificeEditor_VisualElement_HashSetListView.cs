@@ -40,7 +40,7 @@ namespace ArtificeToolkit.Editor.Artifice_PropertyDrawer_SerializedHashSet
             _infoBoxes.Add(infoBox);
             
             // Create property's GUI with ArtificeDrawer
-            var propertyField = ArtificeDrawer.CreatePropertyGUI(property, ShouldForceArtifice || propertyNeedsArtifice);
+            var propertyField = ArtificeDrawer.CreatePropertyGUI(property, ShouldForceArtifice || propertyNeedsArtifice, true, ChildrenInjectedCustomAttributes);
             propertyField = ArtificeDrawer.CreateCustomAttributesGUI(property, propertyField, ChildrenInjectedCustomAttributes);
             propertyField.AddToClassList("property-field");
             container.Add(propertyField);

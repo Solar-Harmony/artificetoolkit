@@ -21,7 +21,7 @@ namespace ArtificeToolkit.Editor
             var propertyNeedsArtifice = Property.GetCustomAttributes().Any(attribute => attribute is ListElementNameAttribute);
             
             // Create property's GUI with ArtificeDrawer
-            var propertyField = ArtificeDrawer.CreatePropertyGUI(property, ShouldForceArtifice || propertyNeedsArtifice);
+            var propertyField = ArtificeDrawer.CreatePropertyGUI(property, ShouldForceArtifice || propertyNeedsArtifice, true, ChildrenInjectedCustomAttributes);
             propertyField = ArtificeDrawer.CreateCustomAttributesGUI(property, propertyField, ChildrenInjectedCustomAttributes);
             propertyField.AddToClassList("property-field");
 

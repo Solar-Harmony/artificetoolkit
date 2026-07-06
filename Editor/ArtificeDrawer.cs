@@ -141,7 +141,7 @@ namespace ArtificeToolkit.Editor
         }
 
         /// <summary> Receives a SerializedProperty as a parameter and returns its Artifice GUI </summary>
-        public VisualElement CreatePropertyGUI(SerializedProperty property, bool forceArtificeStyle = false, bool useFoldoutForVisibleChildren = true)
+        public VisualElement CreatePropertyGUI(SerializedProperty property, bool forceArtificeStyle = false, bool useFoldoutForVisibleChildren = true, List<CustomAttribute> additionalCustomAttributes = null)
         {
             var container = new VisualElement();
             container.AddToClassList("property-container");
@@ -180,7 +180,7 @@ namespace ArtificeToolkit.Editor
                 // If property is a serialized reference of an interface, allow to select which type of interface inheritors to spawn
                 else if (property.IsManagedReference())
                 {
-                    container.Add(CreateSerializeReferenceFieldGUI(property));
+                    container.Add(CreateSerializeReferenceFieldGUI(property, additionalCustomAttributes));
                 }
                 // If property has visible children, wrap it in a foldout to mimic unity's default behaviour or use any potential implemented custom property drawer.
                 else if (property.hasVisibleChildren)
@@ -364,7 +364,7 @@ namespace ArtificeToolkit.Editor
         }
         
         /// <summary> Uses property's managed reference type to provide options of what to instantiate and then draws it on the inspector. </summary>
-        private VisualElement CreateSerializeReferenceFieldGUI(SerializedProperty property)
+        private VisualElement CreateSerializeReferenceFieldGUI(SerializedProperty property, List<CustomAttribute> additionalCustomAttributes = null)
         {
             var typeName = property.managedReferenceFieldTypename;
             var baseType = Artifice_SerializedPropertyExtensions.GetTypeFromFieldTypename(typeName);
@@ -387,12 +387,12 @@ namespace ArtificeToolkit.Editor
                 
                 typeMap.Add(type.Name, type);
             }
-            
+
             // Create base container for property.
             var container = new VisualElement();
             container.AddToClassList("property-container");
             
-            // Create the custom attributes GUI
+            // Create the custom attributes GUI (includes validator infoboxes)
             container = CreateCustomAttributesGUI(property, container);
 
             // Selector container
@@ -474,9 +474,33 @@ namespace ArtificeToolkit.Editor
                 else
                     property.managedReferenceValue = null;
                 
-                var success = property.serializedObject.ApplyModifiedProperties();
-                if (success == false)
-                    Debug.LogWarning("<color=yellow>[ArtificeToolkit]</color> Failed to update serialized property.");
+                property.serializedObject.ApplyModifiedProperties();
+                
+                // TrackPropertyValue may not fire reliably for managed reference changes (known Unity issue).
+                // Manually update validator infoboxes so designers see the validation state immediately.
+                // Search locally first, then upward through parent hierarchy (needed for list elements
+                // where [Required] is injected via ChildrenInjectedCustomAttributes at a higher level).
+                property.serializedObject.Update();
+                var isValid = property.managedReferenceValue != null;
+                var infoBoxes = container.Query<Artifice_VisualElement_InfoBox>().ToList();
+                if (infoBoxes.Count == 0)
+                {
+                    var parent = container.parent;
+                    while (parent != null && parent is not Artifice_VisualElement_AbstractListView && !parent.ClassListContains("artifice-inspector"))
+                    {
+                        infoBoxes.AddRange(parent.Children().OfType<Artifice_VisualElement_InfoBox>());
+                        if (infoBoxes.Count > 0)
+                            break;
+                        parent = parent.parent;
+                    }
+                }
+                foreach (var infoBox in infoBoxes)
+                {
+                    if (isValid)
+                        infoBox.AddToClassList("hide");
+                    else
+                        infoBox.RemoveFromClassList("hide");
+                }
             });
 
             void RebuildReferenceContainerGUI()
