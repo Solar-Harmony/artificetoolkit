@@ -50,6 +50,13 @@ namespace ArtificeToolkit.Editor
         
         #region FIELDS
 
+        /// <summary>
+        /// Fired after one or more elements have been added to a list (via the add button, empty-list add button,
+        /// or the size field). Receives the newly added element's <see cref="SerializedProperty"/>.
+        /// Handlers may mutate the element (e.g. reset cloned fields) before the list is rebuilt.
+        /// </summary>
+        public static event Action<SerializedProperty> ElementAdded;
+
         public bool ShouldForceArtifice { get; set; }
         public event EventHandler BuildUICompleted;
         
@@ -239,8 +246,10 @@ namespace ArtificeToolkit.Editor
                 // Apply changes on Enter
                 if (evt.keyCode == KeyCode.KeypadEnter && sizeValueField.value != _children.Count)
                 {
+                    var oldSize = _children.Count;
                     sizeProperty.intValue = sizeValueField.value;
                     Property.serializedObject.ApplyModifiedProperties();
+                    NotifyElementsAdded(oldSize);
                     BuildListUI();
                 }
             });
@@ -250,8 +259,10 @@ namespace ArtificeToolkit.Editor
                     return;
                 
                 // Apply changes on focus lose (click out of value)
+                var oldSize = _children.Count;
                 sizeProperty.intValue = sizeValueField.value;
                 Property.serializedObject.ApplyModifiedProperties();
+                NotifyElementsAdded(oldSize);
                 BuildListUI();
             });
             
@@ -381,11 +392,22 @@ namespace ArtificeToolkit.Editor
         
         #region On Add / Remove
 
+        /// <summary>
+        /// Raises <see cref="ElementAdded"/> for every element from <paramref name="startIndex"/> to the end of the array.
+        /// </summary>
+        private void NotifyElementsAdded(int startIndex)
+        {
+            Property.serializedObject.Update();
+            for (var i = startIndex; i < Property.arraySize; i++)
+                ElementAdded?.Invoke(Property.GetArrayElementAtIndex(i));
+        }
+
         protected virtual void OnAddItem()
         {
             Property.arraySize++;
             Property.serializedObject.ApplyModifiedProperties();
             Property.serializedObject.Update();
+            NotifyElementsAdded(Property.arraySize - 1);
             BuildListUI();
         }
 
