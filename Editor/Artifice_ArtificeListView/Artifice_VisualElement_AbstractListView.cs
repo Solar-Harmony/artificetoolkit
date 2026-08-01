@@ -51,9 +51,10 @@ namespace ArtificeToolkit.Editor
         #region FIELDS
 
         /// <summary>
-        /// Fired after one or more elements have been added to a list (via the add button, empty-list add button,
-        /// or the size field). Receives the newly added element's <see cref="SerializedProperty"/>.
-        /// Handlers may mutate the element (e.g. reset cloned fields) before the list is rebuilt.
+        /// Fired after a new element has been added to a list (via the add button, empty-list add button, or the size
+        /// field), or after an existing element's contents have been replaced via element paste. Receives the element's
+        /// <see cref="SerializedProperty"/>. Handlers may mutate the element (e.g. reset cloned fields) before the list
+        /// is rebuilt.
         /// </summary>
         public static event Action<SerializedProperty> ElementAdded;
 
@@ -249,6 +250,8 @@ namespace ArtificeToolkit.Editor
                     var oldSize = _children.Count;
                     sizeProperty.intValue = sizeValueField.value;
                     Property.serializedObject.ApplyModifiedProperties();
+                    Property.serializedObject.Update();
+                    DeepCopyNewElementsManagedReferences(oldSize);
                     NotifyElementsAdded(oldSize);
                     BuildListUI();
                 }
@@ -262,6 +265,8 @@ namespace ArtificeToolkit.Editor
                 var oldSize = _children.Count;
                 sizeProperty.intValue = sizeValueField.value;
                 Property.serializedObject.ApplyModifiedProperties();
+                Property.serializedObject.Update();
+                DeepCopyNewElementsManagedReferences(oldSize);
                 NotifyElementsAdded(oldSize);
                 BuildListUI();
             });
@@ -370,6 +375,21 @@ namespace ArtificeToolkit.Editor
             elementContainer.Add(propertyField);
             elementContainer.Add(deleteButtonContainer);
 
+            // Provide element-level copy/paste that handles [SerializeReference] data correctly.
+            // Unity's built-in serialized-property context menu does not preserve managed references, so it is
+            // replaced entirely with one backed by the SerializedPropertyCopier.
+            var elementPath = property.propertyPath;
+            var elementSerializedObject = property.serializedObject;
+            elementContainer.AddManipulator(new ContextualMenuManipulator(evt =>
+            {
+                evt.menu.ClearItems();
+                evt.menu.AppendAction("Copy", _ => DeepCopyElementProperty(elementSerializedObject.FindProperty(elementPath)), DropdownMenuAction.AlwaysEnabled);
+                evt.menu.AppendAction("Paste", _ => DeepPasteElementProperty(elementSerializedObject.FindProperty(elementPath)),
+                    _serializedPropertyCopier is { HasData: true } ? DropdownMenuAction.AlwaysEnabled : DropdownMenuAction.AlwaysDisabled);
+                evt.menu.AppendAction("Copy Property Path", _ => GUIUtility.systemCopyBuffer = elementPath, DropdownMenuAction.AlwaysEnabled);
+                evt.StopPropagation();
+            }));
+
             return elementContainer;
         }
 
@@ -402,11 +422,22 @@ namespace ArtificeToolkit.Editor
                 ElementAdded?.Invoke(Property.GetArrayElementAtIndex(i));
         }
 
+        /// <summary>
+        /// Unity's array add clones the previous element but shares its <c>[SerializeReference]</c> objects.
+        /// Replace them with deep, independent copies so edits to the new element never leak into the previous one.
+        /// </summary>
+        private void DeepCopyNewElementsManagedReferences(int startIndex)
+        {
+            for (var i = startIndex; i < Property.arraySize; i++)
+                Artifice_ManagedReferenceDeepCopy.DeepCopyManagedReferencesInSubtree(Property.GetArrayElementAtIndex(i));
+        }
+
         protected virtual void OnAddItem()
         {
             Property.arraySize++;
             Property.serializedObject.ApplyModifiedProperties();
             Property.serializedObject.Update();
+            DeepCopyNewElementsManagedReferences(Property.arraySize - 1);
             NotifyElementsAdded(Property.arraySize - 1);
             BuildListUI();
         }
@@ -831,6 +862,37 @@ namespace ArtificeToolkit.Editor
                 _serializedPropertyCopier = new SerializedPropertyCopier();
             
             _serializedPropertyCopier.Paste(destination);
+        }
+
+        /// <summary> Copies a single list element (including its [SerializeReference] data) into the clipboard. </summary>
+        private void DeepCopyElementProperty(SerializedProperty element)
+        {
+            if (element == null)
+                return;
+
+            if (_serializedPropertyCopier == null)
+                _serializedPropertyCopier = new SerializedPropertyCopier();
+
+            _serializedPropertyCopier.Copy(element);
+        }
+
+        /// <summary> Pastes the clipboard onto a single list element and rebuilds the list to reflect managed reference changes. </summary>
+        private void DeepPasteElementProperty(SerializedProperty element)
+        {
+            if (element == null)
+                return;
+
+            if (_serializedPropertyCopier == null)
+                _serializedPropertyCopier = new SerializedPropertyCopier();
+
+            _serializedPropertyCopier.Paste(element);
+
+            // A pasted element keeps the source's [SerializeReference]-independent values, but its LocalizedString
+            // references still point at the source's table entries. Raise ElementAdded so consumers (e.g. the game's
+            // dialogue prompt reset) can unlink them, just like on add.
+            ElementAdded?.Invoke(element.Copy());
+
+            BuildListUI();
         }
         
         #endregion

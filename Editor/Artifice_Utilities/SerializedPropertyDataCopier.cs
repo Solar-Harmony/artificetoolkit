@@ -16,14 +16,46 @@ namespace ArtificeToolkit.Editor
             public SerializedPropertyType Type;
         }
 
+        /// <summary> Whether the clipboard contains copied data (used to enable/disable paste actions). </summary>
+        public bool HasData => _copiedData.Count > 0;
+
         public void Copy(SerializedProperty property)
         {
             _copiedData.Clear();
+
+            // When copying a single managed reference element, copy the whole object as a unit.
+            if (property.propertyType == SerializedPropertyType.ManagedReference)
+            {
+                _copiedData.Add(new PropertyData
+                {
+                    RelativePath = "",
+                    Value = Artifice_ManagedReferenceDeepCopy.DeepCopy(property.managedReferenceValue),
+                    Type = property.propertyType
+                });
+                return;
+            }
+
             var copy = property.Copy();
             var end = copy.GetEndProperty();
+            var skipChildren = true;
 
-            while (copy.NextVisible(true) && !SerializedProperty.EqualContents(copy, end))
+            while (copy.NextVisible(skipChildren) && !SerializedProperty.EqualContents(copy, end))
             {
+                skipChildren = true;
+
+                // Managed references are copied as whole objects (deep copy), including their subtree.
+                if (copy.propertyType == SerializedPropertyType.ManagedReference)
+                {
+                    _copiedData.Add(new PropertyData
+                    {
+                        RelativePath = copy.propertyPath.Substring(property.propertyPath.Length + 1),
+                        Value = Artifice_ManagedReferenceDeepCopy.DeepCopy(copy.managedReferenceValue),
+                        Type = copy.propertyType
+                    });
+                    skipChildren = false;
+                    continue;
+                }
+
                 _copiedData.Add(new PropertyData
                 {
                     RelativePath = copy.propertyPath.Substring(property.propertyPath.Length + 1),
@@ -37,8 +69,21 @@ namespace ArtificeToolkit.Editor
         {
             foreach (var data in _copiedData)
             {
-                var targetProp = property.FindPropertyRelative(data.RelativePath);
-                if (targetProp == null) continue;
+                SerializedProperty targetProp;
+                if (data.RelativePath.Length == 0)
+                    targetProp = property;
+                else
+                    targetProp = property.FindPropertyRelative(data.RelativePath);
+
+                if (targetProp == null)
+                    continue;
+
+                if (data.Type == SerializedPropertyType.ManagedReference)
+                {
+                    if (targetProp.propertyType == SerializedPropertyType.ManagedReference)
+                        targetProp.managedReferenceValue = data.Value;
+                    continue;
+                }
 
                 SetValue(targetProp, data.Value, data.Type);
             }
