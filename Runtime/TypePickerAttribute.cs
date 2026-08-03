@@ -10,22 +10,8 @@ namespace ArtificeToolkit.Attributes
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public class TypePickerAttribute : PropertyAttribute
     {
-        public Type BaseType { get; }
         public bool IncludeBaseType { get; set; }
         public bool AllowAbstract { get; set; }
         public bool GroupByNamespace { get; set; } = true;
-
-        /// <summary> String suffix stripped from displayed type names (e.g. "Spec" or "SideEffectConfig"). </summary>
-        public string TrimSuffix { get; set; }
-
-        public TypePickerAttribute()
-        {
-            BaseType = typeof(object);
-        }
-
-        public TypePickerAttribute(Type baseType)
-        {
-            BaseType = baseType ?? typeof(object);
-        }
     }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using ArtificeToolkit.Attributes;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -14,14 +16,12 @@ namespace ArtificeToolkit.Editor
     public sealed class Artifice_ManagedReferenceSearchProvider : ScriptableObject, ISearchWindowProvider
     {
         private List<Type> _candidateTypes;
-        private string _trimSuffix;
         private Action<Type> _onSelect;
 
-        public static Artifice_ManagedReferenceSearchProvider Create(List<Type> candidateTypes, string trimSuffix, Action<Type> onSelect)
+        public static Artifice_ManagedReferenceSearchProvider Create(List<Type> candidateTypes, Action<Type> onSelect)
         {
             var provider = CreateInstance<Artifice_ManagedReferenceSearchProvider>();
             provider._candidateTypes = candidateTypes ?? new List<Type>();
-            provider._trimSuffix = trimSuffix;
             provider._onSelect = onSelect;
             return provider;
         }
@@ -34,10 +34,10 @@ namespace ArtificeToolkit.Editor
             };
 
             var usedNames = new HashSet<string>();
-            foreach (var type in _candidateTypes.OrderBy(t => GetDisplayName(t, _trimSuffix), StringComparer.Ordinal))
+            foreach (var type in _candidateTypes.OrderBy(GetDisplayName, StringComparer.Ordinal))
             {
                 // Guard against same display name from different namespaces.
-                var displayName = GetDisplayName(type, _trimSuffix);
+                var displayName = GetDisplayName(type);
                 if (!usedNames.Add(displayName))
                     displayName = type.FullName ?? type.Name;
                 entries.Add(new SearchTreeEntry(new GUIContent(displayName, type.FullName)) { level = 1, userData = type });
@@ -53,13 +53,13 @@ namespace ArtificeToolkit.Editor
             return true;
         }
 
-        public static string GetDisplayName(Type type, string trimSuffix)
+        public static string GetDisplayName(Type type)
         {
-            var name = type.Name;
-            if (!string.IsNullOrEmpty(trimSuffix) && name.EndsWith(trimSuffix, StringComparison.Ordinal) && name.Length > trimSuffix.Length)
-                name = name.Substring(0, name.Length - trimSuffix.Length);
+            var pickerName = type.GetCustomAttribute<TypePickerNameAttribute>();
+            if (pickerName != null && !string.IsNullOrEmpty(pickerName.Name))
+                return pickerName.Name;
 
-            return ObjectNames.NicifyVariableName(name);
+            return ObjectNames.NicifyVariableName(type.Name);
         }
     }
 }

@@ -445,7 +445,7 @@ namespace ArtificeToolkit.Editor
             {
                 if (property.managedReferenceValue != null)
                     return useSearchTypePicker
-                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(property.managedReferenceValue.GetType(), typePicker?.TrimSuffix)
+                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(property.managedReferenceValue.GetType())
                         : property.managedReferenceValue.GetType().Name;
                 return useSearchTypePicker ? "<None>" : "Null";
             }
@@ -545,7 +545,7 @@ namespace ArtificeToolkit.Editor
                     var rect = input.worldBound;
                     var anchor = GUIUtility.GUIToScreenRect(rect).position + new Vector2(0, rect.height);
                     var context = new SearchWindowContext(anchor + new Vector2(120, 16));
-                    var provider = Artifice_ManagedReferenceSearchProvider.Create(typeMap.Values.ToList(), typePicker.TrimSuffix, ApplyTypeSelection);
+                    var provider = Artifice_ManagedReferenceSearchProvider.Create(typeMap.Values.ToList(), ApplyTypeSelection);
                     SearchWindow.Open(context, provider);
                 });
 
@@ -603,7 +603,7 @@ namespace ArtificeToolkit.Editor
                 trackedProperty.serializedObject.Update();
                 setSelectorLabel(trackedProperty.managedReferenceValue != null
                     ? (useSearchTypePicker
-                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(trackedProperty.managedReferenceValue.GetType(), typePicker?.TrimSuffix)
+                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(trackedProperty.managedReferenceValue.GetType())
                         : trackedProperty.managedReferenceValue.GetType().Name)
                     : (useSearchTypePicker ? "<None>" : "Null"));
             });
