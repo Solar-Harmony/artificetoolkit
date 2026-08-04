@@ -102,7 +102,9 @@ namespace ArtificeToolkit.Editor
                 SerializedPropertyType.Color => prop.colorValue,
                 SerializedPropertyType.ObjectReference => prop.objectReferenceValue,
                 SerializedPropertyType.LayerMask => prop.intValue,
-                SerializedPropertyType.Enum => prop.enumValueIndex,
+                // Copy by underlying value, not display index: enumValueIndex can be -1 / out of range for values
+                // that don't match a declared member, which would crash set_enumValueIndex on paste.
+                SerializedPropertyType.Enum => prop.intValue,
                 SerializedPropertyType.Vector2 => prop.vector2Value,
                 SerializedPropertyType.Vector3 => prop.vector3Value,
                 SerializedPropertyType.Vector4 => prop.vector4Value,
@@ -127,7 +129,7 @@ namespace ArtificeToolkit.Editor
                 case SerializedPropertyType.Color: prop.colorValue = (Color)value; break;
                 case SerializedPropertyType.ObjectReference: prop.objectReferenceValue = (Object)value; break;
                 case SerializedPropertyType.LayerMask: prop.intValue = (int)value; break;
-                case SerializedPropertyType.Enum: prop.enumValueIndex = (int)value; break;
+                case SerializedPropertyType.Enum: prop.intValue = (int)value; break;
                 case SerializedPropertyType.Vector2: prop.vector2Value = (Vector2)value; break;
                 case SerializedPropertyType.Vector3: prop.vector3Value = (Vector3)value; break;
                 case SerializedPropertyType.Vector4: prop.vector4Value = (Vector4)value; break;
