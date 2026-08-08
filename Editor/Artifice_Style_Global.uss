@@ -1,7 +1,7 @@
 .artifice-inspector{
     flex-shrink: 0;
     overflow: hidden;
-    padding-right: 3px;
+    padding-right: 9px;
 }
 
 .hide{

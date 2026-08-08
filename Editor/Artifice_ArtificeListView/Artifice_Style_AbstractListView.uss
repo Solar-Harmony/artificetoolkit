@@ -1,23 +1,29 @@
 .artifice-list{
-    margin: 3px;
-    
-    background-color: #333333;
+    --artifice-collection-indent: 0px;
+    --artifice-row-gutter: 22px;
+
+    margin-top: 3px;
+    margin-bottom: 3px;
+    margin-left: var(--artifice-collection-indent);
+    margin-right: var(--artifice-collection-indent);
+
+    background-color: #262626;
     border-width: 1px;
     border-color: black;
-    
+
     flex-grow: 0;
 }
 
 .list-header{
     flex-direction: row;
     align-items: center;
-
-    padding: 2px;
+    
+    padding: 2px 2px 2px 0;
     margin-bottom: 2px;
 
     border-bottom-width: 1px;
     border-color: black;
-    
+
     width: 100%;
 }
 
@@ -31,14 +37,14 @@
     background-color: dodgerblue;
 }
 
-.drag-hover{    
+.drag-hover{
     background-color: #232323;
 }
 
 .arrow-symbol-label{
     font-size: 10px;
     color: grey;
-    margin-left: 5px;
+    margin-left: 2px;
     margin-right: 3px;
 }
 
@@ -59,7 +65,7 @@
     flex-direction: row;
     margin-right: 15px;
     align-items: center;
-    
+
     justify-content: flex-end;
 }
 .size-title-label{
@@ -67,14 +73,14 @@
 }
 .size-value-field{
     padding: 1px;
-    
+
     flex-grow: 0;
     flex-shrink: 0;
-    
+
     border-width: 1px;
     border-color: black;
     border-radius: 2px;
-    
+
     max-width: 75px;
     min-width: 50px;
 }
@@ -114,37 +120,43 @@
 .element-container .property-container{
     margin-top: 0;
     margin-bottom: 0;
-    padding-right: 2px;
+    padding: 0;
+}
+
+.artifice-list .unity-foldout__content{
+    margin-left: 0;
+    padding-left: 0;
 }
 
 .element-container .unity-base-field {
     margin-left: 2px;
-    margin-right: 3px;
+    margin-right: 2px;
 }
 
 .drag-control{
     color: grey;
-    
-    width: 20px;
+
+    width: var(--artifice-row-gutter);
     height: 20px;
-    
+
     -unity-text-align: upper-center;
-    
+
     scale: 1.5;
 }
 
 .empty-list-label{
-    margin: 5px;
-    margin-left: 18px;
+    margin: 5px 2px;
 }
 
 .property-field{
-    margin-left: 10px; /* Add this for drag control */
+    margin-left: 0;
     flex-grow: 1;
 }
 
 .delete-button-container{
-    width: 25px;
+    position: relative;
+    z-index: 2;
+    width: var(--artifice-row-gutter);
 }
 .delete-button{
     position: absolute;
@@ -157,7 +169,7 @@
     -unity-text-align: middle-center;
 }
 .delete-button:hover{
-    
+
 }
 
 .element-container:hover{

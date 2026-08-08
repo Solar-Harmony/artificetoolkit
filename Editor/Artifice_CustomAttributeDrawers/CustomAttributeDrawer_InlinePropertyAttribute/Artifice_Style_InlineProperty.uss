@@ -1,5 +1,5 @@
 .inline-property-main-container{
-    margin: 2px;
+    margin: 2px 0;
 
     border-width: 1px;
     border-color: black;
