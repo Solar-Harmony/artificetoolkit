@@ -193,8 +193,20 @@ namespace ArtificeToolkit.Editor
                     {
                         var customPropertyField = Artifice_CustomDrawerUtility.CreatePropertyGUI(property);
                         
-                        // In case the custom property utility fails, fallback to a default property field (this was seen in issue #29)
-                        customPropertyField = customPropertyField ?? new PropertyField(property);
+                        // In case the custom property utility fails, fallback to an IMGUI container wrapping
+                        // the drawer's OnGUI. A bound PropertyField is NOT used: fields created during a list
+                        // rebuild (not the inspector's initial bind) never populate their children, so the
+                        // field would render empty until the inspector is re-selected.
+                        if (customPropertyField == null)
+                            customPropertyField = Artifice_CustomDrawerUtility.CreateIMGUIPropertyGUI(property);
+
+                        // Last-resort fallback so a null never reaches container.Add.
+                        if (customPropertyField == null)
+                        {
+                            var fallbackField = new PropertyField(property);
+                            fallbackField.BindProperty(property);
+                            customPropertyField = fallbackField;
+                        }
                         
                         customPropertyField = CreateCustomAttributesGUI(property, customPropertyField);
                         container.Add(customPropertyField);

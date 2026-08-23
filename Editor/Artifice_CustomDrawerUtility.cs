@@ -84,6 +84,50 @@ namespace ArtificeToolkit.Editor
             // Fallback to a default property field if no CreatePropertyGUI method is found
             return new PropertyField(property);
         }
+
+        /// <summary>
+        /// Creates an IMGUI-based property GUI wrapping the custom drawer's OnGUI/GetPropertyHeight.
+        /// Used when the drawer only implements IMGUI (no CreatePropertyGUI override): a bound
+        /// PropertyField is unreliable in that case, since fields created during a list rebuild
+        /// (e.g. Artifice list views) never populate their children until the inspector is re-selected.
+        /// </summary>
+        public static VisualElement CreateIMGUIPropertyGUI(SerializedProperty property)
+        {
+            if (!HasCustomDrawer(property))
+                return null;
+
+            var handler = GetHandlerMethod.Invoke(null, new object[] { property });
+
+            var getPropertyDrawerMethod = handler.GetType().GetMethod("get_propertyDrawer", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (getPropertyDrawerMethod == null)
+                return null;
+
+            var propertyDrawer = (PropertyDrawer)getPropertyDrawerMethod.Invoke(handler, new object[] { });
+            if (propertyDrawer == null)
+                return null;
+
+            // Use a stable copy of the property handle: the original handle can become stale when the
+            // owning serialized object is rebuilt, while a copy refreshes itself on each serializedObject access.
+            var propertyCopy = property.Copy();
+            var label = new GUIContent(property.displayName, property.tooltip);
+
+            var container = new IMGUIContainer(() =>
+            {
+                propertyCopy.serializedObject.UpdateIfRequiredOrScript();
+
+                var height = propertyDrawer.GetPropertyHeight(propertyCopy, label);
+                var rect = GUILayoutUtility.GetRect(EditorGUIUtility.currentViewWidth, height);
+
+                EditorGUI.BeginChangeCheck();
+                propertyDrawer.OnGUI(rect, propertyCopy, label);
+                if (EditorGUI.EndChangeCheck())
+                    propertyCopy.serializedObject.ApplyModifiedProperties();
+            });
+
+            container.AddToClassList(PropertyField.ussClassName);
+
+            return container;
+        }
     }
     
 }
