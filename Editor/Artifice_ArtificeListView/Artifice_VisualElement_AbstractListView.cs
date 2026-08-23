@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using ArtificeToolkit.Attributes;
 using ArtificeToolkit.Editor.VisualElements;
 using UnityEditor;
@@ -251,6 +252,8 @@ namespace ArtificeToolkit.Editor
                     sizeProperty.intValue = sizeValueField.value;
                     Property.serializedObject.ApplyModifiedProperties();
                     Property.serializedObject.Update();
+                    if (oldSize == 0)
+                        InitializeFreshElementDefaults(0);
                     DeepCopyNewElementsManagedReferences(oldSize);
                     NotifyElementsAdded(oldSize);
                     BuildListUI();
@@ -266,6 +269,8 @@ namespace ArtificeToolkit.Editor
                 sizeProperty.intValue = sizeValueField.value;
                 Property.serializedObject.ApplyModifiedProperties();
                 Property.serializedObject.Update();
+                if (oldSize == 0)
+                    InitializeFreshElementDefaults(0);
                 DeepCopyNewElementsManagedReferences(oldSize);
                 NotifyElementsAdded(oldSize);
                 BuildListUI();
@@ -432,11 +437,49 @@ namespace ArtificeToolkit.Editor
                 Artifice_ManagedReferenceDeepCopy.DeepCopyManagedReferencesInSubtree(Property.GetArrayElementAtIndex(i));
         }
 
+        /// <summary>
+        /// Unity grows arrays without invoking C# constructors or field initializers: an element added to an
+        /// empty list is a zeroed default (e.g. <c>Weight = 0</c>), not the defaults declared in code. Seed such
+        /// freshly created elements with the type's field-initializer defaults via a real <see cref="Activator"/>
+        /// instance so the inspector shows what the class actually declares. Elements added to a non-empty list
+        /// are clones of the previous element and are intentionally left untouched.
+        /// </summary>
+        protected virtual void InitializeFreshElementDefaults(int startIndex)
+        {
+            if (startIndex < 0 || startIndex >= Property.arraySize)
+                return;
+
+            var element = Property.GetArrayElementAtIndex(startIndex);
+            if (element.propertyType == SerializedPropertyType.ManagedReference)
+                return; // Managed references are created by the type picker, not the add button.
+
+            var elementType = Property.GetArrayChildrenType();
+            var constructor = GetParameterlessConstructor(elementType);
+            if (constructor == null)
+                return;
+
+            for (var i = startIndex; i < Property.arraySize; i++)
+                Property.GetArrayElementAtIndex(i).boxedValue = constructor.Invoke(null);
+        }
+
+        /// <summary> The parameterless constructor of a plain serializable class, or null when the type is not creatable as a default instance. </summary>
+        private static ConstructorInfo GetParameterlessConstructor(Type type)
+        {
+            if (type == null || !type.IsClass || type.IsAbstract || type.IsInterface || type == typeof(string))
+                return null;
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type))
+                return null;
+            return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+        }
+
         protected virtual void OnAddItem()
         {
+            var wasEmpty = Property.arraySize == 0;
             Property.arraySize++;
             Property.serializedObject.ApplyModifiedProperties();
             Property.serializedObject.Update();
+            if (wasEmpty)
+                InitializeFreshElementDefaults(Property.arraySize - 1);
             DeepCopyNewElementsManagedReferences(Property.arraySize - 1);
             NotifyElementsAdded(Property.arraySize - 1);
             BuildListUI();
