@@ -83,20 +83,6 @@
     height: 100%;
 } 
 
-.reference-container{
-    transition: 0.5s;
-    
-    border-left-width: 1px;
-    border-bottom-width: 2px;
-    border-color: black;
-    border-bottom-left-radius: 15px;
-    border-bottom-right-radius: 15px;
-    
-    padding: 5px;
-    padding-bottom: 10px;
-    margin-bottom: 2px;
-}
-
 .artifice-inspector .unity-property-field__imgui-container-property{
     margin-left: 0;
     margin-right: 0;
