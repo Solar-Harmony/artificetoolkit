@@ -1,4 +1,26 @@
 # Change Log:
+
+## 2.5.1
+- Fix: Updated `ArtificeDrawer` so that it uses Unity's native Dictionary drawer. Upon using the native drawer, you cannot use `CustomAttributes` inside the dictionary pair, so there is still good use for Artifice's own `SerializedDictionary`.
+
+## 2.5.0
+- Fix: Box groups are now owned by each `ArtificeDrawer`, preventing locked or parallel Inspectors from clearing or reparenting each other's group hierarchies.
+- Breaking: Removed `Artifice_CustomAttributeUtility_GroupsHolder.Instance` and `ClearSerializedObject`. Custom group drawers should use the inherited protected `GroupsHolder` property
+
+## 2.4.1
+- Fix: Optimized abstract list view of artifice for better event subscriptions and overall improvements. Undo-redo was previously causing slow editor times previously.
+
+## 2.4.0
+- Enhancement: Added native light and dark Unity Editor theme support across Artifice inspectors, custom attributes, editor windows, the Inspector Header, Validator, toolbar integration, and iconography.
+- Enhancement: Group colors now use adaptive semantic surfaces while preserving the existing `GroupColor` API, and parameterless borders follow Unity's active theme without changing explicitly supplied colors.
+- Enhancement: Added examples for all attributes to `Artifice_ExampleForArtificeAttributes`.
+
+## 2.3.3
+- Enhancement: `SerializedDictionary` now allows duplicate keys in the editor (functioning like a plain list) and provides real-time visual warnings for them. Duplicates are safely skipped during deserialization to maintain dictionary integrity.
+- Enhancement: Now selecting a validator type filters additionally for that selected type. "Escape" cancels the selection. 
+- Fix: Fixed an issue in `Artifice_EditorWindow_Validator` where clicking on items in the Validator Types list would incorrectly select elements above them.
+- Fix: Now non-applicable attributes also show their type name.
+
 ## 2.3.2
 - Fix: Added empty custom attribute drawer for `SortAttribute` to skip warning of non-existing drawer.
 

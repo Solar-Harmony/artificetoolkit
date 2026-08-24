@@ -683,7 +683,7 @@ The default UnityEngine `Tooltip` interacts really poorly with Artifice lists fo
 ## Extra Features
 The ArtificeToolkit comes with a lot of extra stuff that will be briefly mentioned here. In the future, more documentation will be added in this section.
 
-1. <b>SerializedDictionary</b>: ArtificeToolkit holds its own serializable dictionary implementation. It can be used and controlled in the inspector with any serializable type.
+1. <b>SerializedDictionary</b>: ArtificeToolkit holds its own serializable dictionary implementation. It can be used and controlled in the inspector with any serializable type. It behaves like a plain list in the editor, allowing you to add duplicate keys while editing, but provides visual warnings and safely skips duplicates during deserialization to maintain dictionary integrity.
 
 <div style="display: flex; justify-content: center;">
   <img src="./Documentation/artifice_serializedDictionary.gif" alt="GIF Example" style="width: 500px; height: 500px" />
@@ -1144,6 +1144,6 @@ Serialized property type Generic does not support value tracking; callback is no
 UnityEditor.RetainedMode:UpdateSchedulers ()
 ```
  
-- The ArtificeToolkit was created with Dark Theme is mind and is currently the only supported color palette.
+- ArtificeToolkit follows Unity's active Personal/Light or Professional/Dark Editor theme automatically in Unity 2022.3 and later.
 
 - `UnityEngine.Tooltip` breaks the rendering of Artifice lists. Use `SafeTooltip` instead.
