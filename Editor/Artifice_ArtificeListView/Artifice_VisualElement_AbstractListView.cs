@@ -143,37 +143,7 @@ namespace ArtificeToolkit.Editor
                     }
                     else
                     {
-                        // Build List Header
-                        elem.Add(BuildListHeaderUI());
-                        
-                        // PreChildren Build
-                        var prePropertyElem = BuildPrePropertyUI(Property);
-                        elem.Add(prePropertyElem);
-                        
-                        // Add children
-                        var index = 0;
-                        _childrenContainer = new VisualElement();
-                        _childrenContainer.AddToClassList("children-container");
-                        _childrenContainer.SetEnabled(_isEditable);
-
-                        foreach (var childProperty in childrenProperties)
-                        {
-                            if (childProperty.propertyType == SerializedPropertyType.ArraySize)
-                                continue;
-
-                            var childElem = BuildListElementUI(childProperty, index);
-                            _children.Add(new ChildElement(childElem, childProperty, index++));
-                            _childrenContainer.Add(childElem);
-                        }
-                        
-                        elem.Add(_childrenContainer);
-
-                        // Set children container hide state based on isExpanded
-                        if (Property.isExpanded == false)
-                        {
-                            prePropertyElem?.AddToClassList("hide");
-                            _childrenContainer.AddToClassList("hide");
-                        }
+                        BuildListContents(elem, childrenProperties);
                     }
                     
                     Property.serializedObject.ApplyModifiedProperties();
@@ -182,6 +152,42 @@ namespace ArtificeToolkit.Editor
             );
             
             LoadPersistedData();
+        }
+
+        /// <summary> Builds the list header, children container and expanded state for a non-empty list. </summary>
+        private void BuildListContents(VisualElement elem, IReadOnlyCollection<SerializedProperty> childrenProperties)
+        {
+            // Build List Header
+            elem.Add(BuildListHeaderUI());
+
+            // PreChildren Build
+            var prePropertyElem = BuildPrePropertyUI(Property);
+            elem.Add(prePropertyElem);
+
+            // Add children
+            var index = 0;
+            _childrenContainer = new VisualElement();
+            _childrenContainer.AddToClassList("children-container");
+            _childrenContainer.SetEnabled(_isEditable);
+
+            foreach (var childProperty in childrenProperties)
+            {
+                if (childProperty.propertyType == SerializedPropertyType.ArraySize)
+                    continue;
+
+                var childElem = BuildListElementUI(childProperty, index);
+                _children.Add(new ChildElement(childElem, childProperty, index++));
+                _childrenContainer.Add(childElem);
+            }
+
+            elem.Add(_childrenContainer);
+
+            // Set children container hide state based on isExpanded
+            if (Property.isExpanded == false)
+            {
+                prePropertyElem?.AddToClassList("hide");
+                _childrenContainer.AddToClassList("hide");
+            }
         }
 
         private VisualElement BuildPrefabOverrideIndicatorUI()
