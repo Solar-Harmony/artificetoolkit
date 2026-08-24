@@ -56,6 +56,34 @@ namespace ArtificeToolkit.Editor
                     continue;
                 }
 
+                if (copy.propertyType == SerializedPropertyType.Generic)
+                {
+                    // Serialized classes are copied whole via boxedValue: walking their leaves mishandles 64-bit
+                    // fields (e.g. LocalizedString's KeyId is truncated by intValue) and nested collections.
+                    // Arrays cannot be boxed, so they keep the leaf walk below.
+                    if (copy.isArray == false)
+                    {
+                        object value;
+                        try
+                        {
+                            value = Artifice_ManagedReferenceDeepCopy.DeepCopy(copy.boxedValue);
+                        }
+                        catch
+                        {
+                            value = copy.boxedValue;
+                        }
+
+                        _copiedData.Add(new PropertyData
+                        {
+                            RelativePath = copy.propertyPath.Substring(property.propertyPath.Length + 1),
+                            Value = value,
+                            Type = copy.propertyType
+                        });
+                        skipChildren = false;
+                    }
+                    continue;
+                }
+
                 _copiedData.Add(new PropertyData
                 {
                     RelativePath = copy.propertyPath.Substring(property.propertyPath.Length + 1),
@@ -85,6 +113,13 @@ namespace ArtificeToolkit.Editor
                     continue;
                 }
 
+                if (data.Type == SerializedPropertyType.Generic)
+                {
+                    if (targetProp.propertyType == SerializedPropertyType.Generic)
+                        targetProp.boxedValue = data.Value;
+                    continue;
+                }
+
                 SetValue(targetProp, data.Value, data.Type);
             }
 
@@ -95,7 +130,8 @@ namespace ArtificeToolkit.Editor
         {
             return prop.propertyType switch
             {
-                SerializedPropertyType.Integer => prop.intValue,
+                // Integer covers both Int32 and Int64: longValue preserves 64-bit keys (e.g. LocalizedString's KeyId).
+                SerializedPropertyType.Integer => prop.longValue,
                 SerializedPropertyType.Boolean => prop.boolValue,
                 SerializedPropertyType.Float => prop.floatValue,
                 SerializedPropertyType.String => prop.stringValue,
@@ -122,7 +158,7 @@ namespace ArtificeToolkit.Editor
         {
             switch (type)
             {
-                case SerializedPropertyType.Integer: prop.intValue = (int)value; break;
+                case SerializedPropertyType.Integer: prop.longValue = (long)value; break;
                 case SerializedPropertyType.Boolean: prop.boolValue = (bool)value; break;
                 case SerializedPropertyType.Float: prop.floatValue = (float)value; break;
                 case SerializedPropertyType.String: prop.stringValue = (string)value; break;
