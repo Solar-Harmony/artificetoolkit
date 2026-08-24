@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using ArtificeToolkit.Attributes;
 using UnityEngine;
 
@@ -92,19 +91,15 @@ namespace ArtificeToolkit.Examples
         {
             public enum WeaponType
             {
-                [Description("1d8/1d10 slashing, versatile — can be wielded with one or two hands")]
                 Longsword,
-                [Description("1d8 piercing, finesse — uses DEX for attack and damage rolls")]
                 Rapier,
-                [Description("1d8 piercing, two-handed ranged (150/600 ft)")]
                 Bow,
-                [Description("1d12 slashing, heavy, two-handed")]
                 Axe
             }
 
             [MinValue(0)] public int amount;
 
-            [EnumToggle, HideLabel, ShowEnumInfo] public WeaponType weaponType;
+            [EnumToggle, HideLabel] public WeaponType weaponType;
         }
 
         [Serializable]

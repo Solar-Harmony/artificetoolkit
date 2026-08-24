@@ -9,7 +9,6 @@ using ArtificeToolkit.Editor.Artifice_CustomAttributeDrawers.CustomAttributeDraw
 using ArtificeToolkit.Editor.Resources;
 using ArtificeToolkit.Editor.VisualElements;
 using UnityEditor;
-using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -157,9 +156,10 @@ namespace ArtificeToolkit.Editor
                 forceArtificeStyle = forceArtificeStyle || attributes.Any(attribute => attribute is ForceArtificeAttribute);
 
             // If artifice rendering is required.
-            // A null managed reference annotated with TypePicker has no children/attributes of its own,
-            // so it would otherwise skip the searchable selector entirely; force it through Artifice.
-            if (forceArtificeStyle || DoesRequireArtificeRendering(property) || (property.IsManagedReference() && GetTypePickerAttribute(property) != null))
+            // A null managed reference with a custom selector registered via Artifice_SerializeReferenceSelector
+            // has no children/attributes of its own, so it would otherwise skip the selector entirely; force it
+            // through Artifice.
+            if (forceArtificeStyle || DoesRequireArtificeRendering(property) || (property.IsManagedReference() && Artifice_SerializeReferenceSelector.RequiresSelector?.Invoke(property) == true))
             {
                 // Arrays need to use custom Artifice List Views (and not a string value!)
                 if (property.IsArray())
@@ -417,10 +417,6 @@ namespace ArtificeToolkit.Editor
 
             // Don't show a selector for concrete types
             bool isPolymorphicType = baseType.IsInterface || baseType.IsAbstract || typeMap.Count != 1;
-            
-            // Use the searchable type picker when the field is annotated with TypePicker.
-            var typePicker = GetTypePickerAttribute(property);
-            bool useSearchTypePicker = isPolymorphicType && typePicker != null;
 
             // Create container for drawing selected inherited property. This will be cleared and drawn again upon change.
             var referenceContainer = new VisualElement();
@@ -451,15 +447,6 @@ namespace ArtificeToolkit.Editor
                 }
                 else
                     referenceContainer.AddToClassList("hide");
-            }
-
-            string GetSelectorLabel()
-            {
-                if (property.managedReferenceValue != null)
-                    return useSearchTypePicker
-                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(property.managedReferenceValue.GetType())
-                        : property.managedReferenceValue.GetType().Name;
-                return useSearchTypePicker ? "<None>" : "Null";
             }
 
             void ApplyTypeSelection(Type selectedType)
@@ -511,82 +498,48 @@ namespace ArtificeToolkit.Editor
                 });
             }
 
-            // Selector: searchable popup button (TypePicker) or classic dropdown.
+            // Selector: a custom selector provided by an extension hook (e.g. searchable type picker) or the default dropdown.
             VisualElement selector = null;
             Action<string> setSelectorLabel = null;
 
-            if (useSearchTypePicker)
-            {
-                // Mirror Unity's DropdownField structure so the selector reads as a dropdown, not a button.
-                var searchField = new VisualElement();
-                searchField.AddToClassList(BaseField<object>.alignedFieldUssClassName);
-                searchField.AddToClassList("unity-base-field");
-                searchField.AddToClassList("unity-base-popup-field");
-                searchField.AddToClassList("unity-popup-field");
-                searchField.style.flexGrow = 1;
-
-                var fieldLabel = new Label(property.displayName);
-                fieldLabel.AddToClassList(BaseField<object>.labelUssClassName);
-                searchField.Add(fieldLabel);
-
-                var input = new VisualElement();
-                input.AddToClassList(BaseField<object>.inputUssClassName);
-                input.AddToClassList("unity-base-popup-field__input");
-                input.AddToClassList("unity-popup-field__input");
-                searchField.Add(input);
-
-                var valueLabel = new Label();
-                valueLabel.AddToClassList("unity-base-popup-field__text");
-                valueLabel.pickingMode = PickingMode.Ignore;
-                input.Add(valueLabel);
-
-                var arrow = new VisualElement();
-                arrow.AddToClassList("unity-base-popup-field__arrow");
-                arrow.pickingMode = PickingMode.Ignore;
-                input.Add(arrow);
-
-                setSelectorLabel = label =>
-                {
-                    valueLabel.text = label;
-                    valueLabel.style.color = label == "<None>" ? Color.red : StyleKeyword.Null;
-                };
-
-                input.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    // Anchor the popup to the bottom-left of the dropdown input.
-                    var rect = input.worldBound;
-                    var anchor = GUIUtility.GUIToScreenRect(rect).position + new Vector2(0, rect.height);
-                    var context = new SearchWindowContext(anchor + new Vector2(120, 16));
-                    var provider = Artifice_ManagedReferenceSearchProvider.Create(typeMap.Values.ToList(), ApplyTypeSelection);
-                    SearchWindow.Open(context, provider);
-                });
-
-                selector = searchField;
-            }
-            else
-            {
-                var dropdown = new DropdownField();
-                dropdown.AddToClassList(BaseField<object>.alignedFieldUssClassName);
-                dropdown.label = property.displayName;
-                dropdown.choices.Add("Null");
-                foreach (var pair in typeMap)
-                    dropdown.choices.Add(pair.Key);
-
-                setSelectorLabel = label => dropdown.value = label;
-                dropdown.RegisterValueChangedCallback(evt =>
-                {
-                    // Get value from type map, create instance and draw from artifice.
-                    typeMap.TryGetValue(evt.newValue, out var type);
-                    ApplyTypeSelection(type);
-                });
-                selector = dropdown;
-            }
-
             if (isPolymorphicType)
+            {
+                selector = Artifice_SerializeReferenceSelector.TryCreate?.Invoke(property, typeMap, ApplyTypeSelection);
+
+                if (selector == null)
+                {
+                    var dropdown = new DropdownField();
+                    dropdown.AddToClassList(BaseField<object>.alignedFieldUssClassName);
+                    dropdown.label = property.displayName;
+                    dropdown.choices.Add("Null");
+                    foreach (var pair in typeMap)
+                        dropdown.choices.Add(pair.Key);
+
+                    setSelectorLabel = label => dropdown.value = label;
+                    dropdown.RegisterValueChangedCallback(evt =>
+                    {
+                        // Get value from type map, create instance and draw from artifice.
+                        typeMap.TryGetValue(evt.newValue, out var type);
+                        ApplyTypeSelection(type);
+                    });
+                    selector = dropdown;
+                }
+
                 selectorContainer.Add(selector);
 
-            // Initialize selector label based on current value.
-            setSelectorLabel(GetSelectorLabel());
+                // Custom selectors self-manage their label; the default dropdown is synced here.
+                if (setSelectorLabel != null)
+                {
+                    setSelectorLabel(GetDefaultSelectorLabel(property));
+
+                    // Selector should also track the property in order to update its label on external updates.
+                    selector.TrackPropertyValue(property, trackedProperty =>
+                    {
+                        trackedProperty.serializedObject.Update();
+                        setSelectorLabel(GetDefaultSelectorLabel(trackedProperty));
+                    });
+                }
+            }
 
             // Render any existing managed reference data immediately.
             RebuildReferenceContainerGUI();
@@ -599,7 +552,7 @@ namespace ArtificeToolkit.Editor
                     property.managedReferenceValue = Activator.CreateInstance(singleType);
                     property.serializedObject.ApplyModifiedProperties();
                 }
-                setSelectorLabel(singleType.Name);
+                setSelectorLabel?.Invoke(singleType.Name);
                 RebuildReferenceContainerGUI();
             }
             
@@ -608,46 +561,15 @@ namespace ArtificeToolkit.Editor
             {
                 RebuildReferenceContainerGUI();
             });
-            
-            // Selector should also track the property in order to update its label on external updates.
-            selector.TrackPropertyValue(property, trackedProperty =>
-            {
-                trackedProperty.serializedObject.Update();
-                setSelectorLabel(trackedProperty.managedReferenceValue != null
-                    ? (useSearchTypePicker
-                        ? Artifice_ManagedReferenceSearchProvider.GetDisplayName(trackedProperty.managedReferenceValue.GetType())
-                        : trackedProperty.managedReferenceValue.GetType().Name)
-                    : (useSearchTypePicker ? "<None>" : "Null"));
-            });
 
             return container;
         }
 
-        /// <summary> Returns the <c>TypePickerAttribute</c> on the field (or its array parent), or null. </summary>
-        private static TypePickerAttribute GetTypePickerAttribute(SerializedProperty property)
+        private static string GetDefaultSelectorLabel(SerializedProperty property)
         {
-            var attribute = FindTypePicker(property.GetAttributes());
-            if (attribute != null)
-                return attribute;
-
-            // Array element properties do not resolve to the declaring field; walk up to it.
-            var parent = property.FindParentProperty();
-            for (var depth = 0; parent != null && depth < 4; depth++)
-            {
-                attribute = FindTypePicker(parent.GetAttributes());
-                if (attribute != null)
-                    return attribute;
-                parent = parent.FindParentProperty();
-            }
-
-            return null;
+            return property.managedReferenceValue != null ? property.managedReferenceValue.GetType().Name : "Null";
         }
 
-        private static TypePickerAttribute FindTypePicker(IEnumerable<Attribute> attributes)
-        {
-            return attributes != null ? attributes.OfType<TypePickerAttribute>().FirstOrDefault() : null;
-        }
-        
         /// <summary> Returns a <see cref="VisualElement"/> with buttons which invoke the methods marked with the <see cref="ButtonAttribute"/>. </summary>
         /// <remarks> Unfortunately, there is not unified structure for SerializedObject and SerializedProperty. A template is used here to avoid deduplicate method overloads. </remarks>
         public VisualElement CreateMethodsGUI<T>(T serializedData) where T : class

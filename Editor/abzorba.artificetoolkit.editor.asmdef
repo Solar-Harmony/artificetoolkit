@@ -3,8 +3,7 @@
     "rootNamespace": "",
     "references": [
         "GUID:478a2357cc57436488a56e564b08d223",
-        "GUID:bb2b36e553b3dcb4f83b3babae58fa1a",
-        "UnityEditor.GraphView"
+        "GUID:bb2b36e553b3dcb4f83b3babae58fa1a"
     ],
     "includePlatforms": [
         "Editor"
